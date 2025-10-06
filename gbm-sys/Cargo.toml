@@ -9,14 +9,17 @@ repository = "https://github.com/Drakulix/gbm.rs/tree/master/gbm-sys"
 keywords = ["gbm", "bindings"]
 categories = ["external-ffi-bindings"]
 license = "MIT"
-license-file = "../LICENSE"
 edition = "2021"
 
 [lib]
 path = "src/lib.rs"
 
 [build-dependencies.bindgen]
-version = "0.69"
+version = "0.72"
+optional = true
+
+[dependencies.libloading]
+version = "0.8"
 optional = true
 
 # Specify version of bindgen deps to fix `check-minimal` test
@@ -30,3 +33,4 @@ libc = "0.2"
 [features]
 use_bindgen = ["bindgen", "dep:proc-macro2", "dep:regex"]
 update_bindings = ["use_bindgen"]
+dynamic = ["dep:libloading"]

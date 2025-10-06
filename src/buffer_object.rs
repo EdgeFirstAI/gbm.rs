@@ -1,18 +1,18 @@
 #![allow(clippy::unnecessary_cast)]
 
-use crate::{AsRaw, Format, Modifier, Ptr};
-
+use crate::{AsRaw, Format, Gbm, Modifier, Ptr};
+use bitflags::bitflags;
 #[cfg(feature = "drm-support")]
 use drm::buffer::{Buffer as DrmBuffer, Handle, PlanarBuffer as DrmPlanarBuffer};
-use std::os::unix::io::{BorrowedFd, FromRawFd, OwnedFd};
-
-use std::error;
-use std::fmt;
-use std::io::{Error as IoError, Result as IoResult};
-use std::marker::PhantomData;
-use std::ops::{Deref, DerefMut};
-use std::ptr;
-use std::slice;
+use std::{
+    error, fmt,
+    io::{Error as IoError, Result as IoResult},
+    marker::PhantomData,
+    ops::{Deref, DerefMut},
+    os::unix::io::{BorrowedFd, FromRawFd, OwnedFd},
+    ptr, slice,
+    sync::Arc,
+};
 
 /// A GBM buffer object
 pub struct BufferObject<T: 'static> {
@@ -20,6 +20,7 @@ pub struct BufferObject<T: 'static> {
     pub(crate) ffi: Ptr<ffi::gbm_bo>,
     pub(crate) _device: Ptr<ffi::gbm_device>,
     pub(crate) _userdata: PhantomData<T>,
+    pub(crate) gbm: Arc<Gbm>,
 }
 
 impl<T> fmt::Debug for BufferObject<T> {
@@ -110,7 +111,8 @@ impl<'a, T> fmt::Debug for MappedBufferObject<'a, T> {
 impl<'a, T: 'static> MappedBufferObject<'a, T> {
     /// Get the stride of the buffer object
     ///
-    /// This is calculated by the backend when it does the allocation of the buffer.
+    /// This is calculated by the backend when it does the allocation of the
+    /// buffer.
     pub fn stride(&self) -> u32 {
         self.stride
     }
@@ -125,12 +127,14 @@ impl<'a, T: 'static> MappedBufferObject<'a, T> {
         self.width
     }
 
-    /// The X (top left origin) starting position of the mapped region for the buffer
+    /// The X (top left origin) starting position of the mapped region for the
+    /// buffer
     pub fn x(&self) -> u32 {
         self.x
     }
 
-    /// The Y (top left origin) starting position of the mapped region for the buffer
+    /// The Y (top left origin) starting position of the mapped region for the
+    /// buffer
     pub fn y(&self) -> u32 {
         self.y
     }
@@ -148,6 +152,7 @@ impl<'a, T: 'static> MappedBufferObject<'a, T> {
 
 impl<'a, T: 'static> Deref for MappedBufferObject<'a, T> {
     type Target = BufferObject<T>;
+
     fn deref(&self) -> &BufferObject<T> {
         match &self.bo {
             BORef::Ref(bo) => bo,
@@ -171,7 +176,7 @@ impl<'a, T: 'static> Drop for MappedBufferObject<'a, T> {
             BORef::Ref(bo) => &bo.ffi,
             BORef::Mut(bo) => &bo.ffi,
         };
-        unsafe { ffi::gbm_bo_unmap(**ffi, self.data) }
+        unsafe { self.gbm.gbm_bo_unmap(**ffi, self.data) }
     }
 }
 
@@ -185,48 +190,48 @@ unsafe extern "C" fn destroy<T: 'static>(_: *mut ffi::gbm_bo, ptr: *mut ::libc::
 impl<T: 'static> BufferObject<T> {
     /// Get the width of the buffer object
     pub fn width(&self) -> u32 {
-        unsafe { ffi::gbm_bo_get_width(*self.ffi) }
+        unsafe { self.gbm.gbm_bo_get_width(*self.ffi) }
     }
 
     /// Get the height of the buffer object
     pub fn height(&self) -> u32 {
-        unsafe { ffi::gbm_bo_get_height(*self.ffi) }
+        unsafe { self.gbm.gbm_bo_get_height(*self.ffi) }
     }
 
     /// Get the stride of the buffer object
     pub fn stride(&self) -> u32 {
-        unsafe { ffi::gbm_bo_get_stride(*self.ffi) }
+        unsafe { self.gbm.gbm_bo_get_stride(*self.ffi) }
     }
 
     /// Get the stride of the buffer object
     pub fn stride_for_plane(&self, plane: i32) -> u32 {
-        unsafe { ffi::gbm_bo_get_stride_for_plane(*self.ffi, plane) }
+        unsafe { self.gbm.gbm_bo_get_stride_for_plane(*self.ffi, plane) }
     }
 
     /// Get the format of the buffer object
     pub fn format(&self) -> Format {
-        Format::try_from(unsafe { ffi::gbm_bo_get_format(*self.ffi) })
+        Format::try_from(unsafe { self.gbm.gbm_bo_get_format(*self.ffi) })
             .expect("libgbm returned invalid buffer format")
     }
 
     /// Get the bits per pixel of the buffer object
     pub fn bpp(&self) -> u32 {
-        unsafe { ffi::gbm_bo_get_bpp(*self.ffi) }
+        unsafe { self.gbm.gbm_bo_get_bpp(*self.ffi) }
     }
 
     /// Get the offset for a plane of the buffer object
     pub fn offset(&self, plane: i32) -> u32 {
-        unsafe { ffi::gbm_bo_get_offset(*self.ffi, plane) }
+        unsafe { self.gbm.gbm_bo_get_offset(*self.ffi, plane) }
     }
 
     /// Get the plane count of the buffer object
     pub fn plane_count(&self) -> u32 {
-        unsafe { ffi::gbm_bo_get_plane_count(*self.ffi) as u32 }
+        unsafe { self.gbm.gbm_bo_get_plane_count(*self.ffi) as u32 }
     }
 
     /// Get the modifier of the buffer object
     pub fn modifier(&self) -> Modifier {
-        Modifier::from(unsafe { ffi::gbm_bo_get_modifier(*self.ffi) })
+        Modifier::from(unsafe { self.gbm.gbm_bo_get_modifier(*self.ffi) })
     }
 
     /// Get a DMA-BUF file descriptor for the buffer object
@@ -237,7 +242,7 @@ impl<T: 'static> BufferObject<T> {
     /// descriptor.
     pub fn fd(&self) -> Result<OwnedFd, InvalidFdError> {
         unsafe {
-            let fd = ffi::gbm_bo_get_fd(*self.ffi);
+            let fd = self.gbm.gbm_bo_get_fd(*self.ffi);
 
             if fd == -1 {
                 return Err(InvalidFdError);
@@ -248,27 +253,27 @@ impl<T: 'static> BufferObject<T> {
     }
 
     /// Get the file descriptor of the gbm device of this buffer object
-    pub fn device_fd(&self) -> BorrowedFd {
-        unsafe { BorrowedFd::borrow_raw(ffi::gbm_device_get_fd(*self._device)) }
+    pub fn device_fd(&'_ self) -> BorrowedFd<'_> {
+        unsafe { BorrowedFd::borrow_raw(self.gbm.gbm_device_get_fd(*self._device)) }
     }
 
     /// Get the handle of the buffer object
     ///
-    /// This is stored in the platform generic union [`BufferObjectHandle`] type.  However
-    /// the format of this handle is platform specific.
+    /// This is stored in the platform generic union [`BufferObjectHandle`]
+    /// type.  However the format of this handle is platform specific.
     pub fn handle(&self) -> BufferObjectHandle {
-        unsafe { ffi::gbm_bo_get_handle(*self.ffi) }
+        unsafe { self.gbm.gbm_bo_get_handle(*self.ffi) }
     }
 
     /// Get a DMA-BUF file descriptor for a plane of the buffer object
     ///
     /// This function creates a DMA-BUF (also known as PRIME) file descriptor
-    /// handle for a plane of the buffer object. Each call to [`Self::fd_for_plane()`]
-    /// returns a new file descriptor and the caller is responsible for closing
-    /// the file descriptor.
+    /// handle for a plane of the buffer object. Each call to
+    /// [`Self::fd_for_plane()`] returns a new file descriptor and the
+    /// caller is responsible for closing the file descriptor.
     pub fn fd_for_plane(&self, plane: i32) -> Result<OwnedFd, InvalidFdError> {
         unsafe {
-            let fd = ffi::gbm_bo_get_fd_for_plane(*self.ffi, plane);
+            let fd = self.gbm.gbm_bo_get_fd_for_plane(*self.ffi, plane);
 
             if fd == -1 {
                 return Err(InvalidFdError);
@@ -280,10 +285,10 @@ impl<T: 'static> BufferObject<T> {
 
     /// Get the handle of a plane of the buffer object
     ///
-    /// This is stored in the platform generic union [`BufferObjectHandle`] type.  However
-    /// the format of this handle is platform specific.
+    /// This is stored in the platform generic union [`BufferObjectHandle`]
+    /// type.  However the format of this handle is platform specific.
     pub fn handle_for_plane(&self, plane: i32) -> BufferObjectHandle {
-        unsafe { ffi::gbm_bo_get_handle_for_plane(*self.ffi, plane) }
+        unsafe { self.gbm.gbm_bo_get_handle_for_plane(*self.ffi, plane) }
     }
 
     /// Map a region of a GBM buffer object for cpu access
@@ -296,7 +301,7 @@ impl<T: 'static> BufferObject<T> {
         unsafe {
             let mut data: *mut ::libc::c_void = ptr::null_mut();
             let mut stride = 0;
-            let ptr = ffi::gbm_bo_map(
+            let ptr = self.gbm.gbm_bo_map(
                 *self.ffi,
                 x,
                 y,
@@ -341,7 +346,7 @@ impl<T: 'static> BufferObject<T> {
         unsafe {
             let mut data: *mut ::libc::c_void = ptr::null_mut();
             let mut stride = 0;
-            let ptr = ffi::gbm_bo_map(
+            let ptr = self.gbm.gbm_bo_map(
                 *self.ffi,
                 x,
                 y,
@@ -371,14 +376,17 @@ impl<T: 'static> BufferObject<T> {
 
     ///  Write data into the buffer object
     ///
-    /// If the buffer object was created with the [`BufferObjectFlags::WRITE`] flag,
-    /// this function can be used to write data into the buffer object.  The
-    /// data is copied directly into the object and it's the responsibility
-    /// of the caller to make sure the data represents valid pixel data,
-    /// according to the width, height, stride and format of the buffer object.
+    /// If the buffer object was created with the [`BufferObjectFlags::WRITE`]
+    /// flag, this function can be used to write data into the buffer
+    /// object.  The data is copied directly into the object and it's the
+    /// responsibility of the caller to make sure the data represents valid
+    /// pixel data, according to the width, height, stride and format of the
+    /// buffer object.
     pub fn write(&mut self, buffer: &[u8]) -> IoResult<()> {
-        let result =
-            unsafe { ffi::gbm_bo_write(*self.ffi, buffer.as_ptr() as *const _, buffer.len() as _) };
+        let result = unsafe {
+            self.gbm
+                .gbm_bo_write(*self.ffi, buffer.as_ptr() as *const _, buffer.len() as _)
+        };
         if result != 0 {
             Err(IoError::last_os_error())
         } else {
@@ -394,7 +402,7 @@ impl<T: 'static> BufferObject<T> {
 
         let boxed = Box::new(userdata);
         unsafe {
-            ffi::gbm_bo_set_user_data(
+            self.gbm.gbm_bo_set_user_data(
                 *self.ffi,
                 Box::into_raw(boxed) as *mut _,
                 Some(destroy::<T>),
@@ -411,7 +419,7 @@ impl<T: 'static> BufferObject<T> {
 
     /// Returns a reference to set userdata, if any.
     pub fn userdata(&self) -> Option<&T> {
-        let raw = unsafe { ffi::gbm_bo_get_user_data(*self.ffi) };
+        let raw = unsafe { self.gbm.gbm_bo_get_user_data(*self.ffi) };
 
         if raw.is_null() {
             None
@@ -422,7 +430,7 @@ impl<T: 'static> BufferObject<T> {
 
     /// Returns a mutable reference to set userdata, if any.
     pub fn userdata_mut(&mut self) -> Option<&mut T> {
-        let raw = unsafe { ffi::gbm_bo_get_user_data(*self.ffi) };
+        let raw = unsafe { self.gbm.gbm_bo_get_user_data(*self.ffi) };
 
         if raw.is_null() {
             None
@@ -435,14 +443,15 @@ impl<T: 'static> BufferObject<T> {
     ///
     /// This removes the userdata from the buffer object.
     pub fn take_userdata(&mut self) -> Option<T> {
-        let raw = unsafe { ffi::gbm_bo_get_user_data(*self.ffi) };
+        let raw = unsafe { self.gbm.gbm_bo_get_user_data(*self.ffi) };
 
         if raw.is_null() {
             None
         } else {
             unsafe {
                 let boxed = Box::from_raw(raw as *mut T);
-                ffi::gbm_bo_set_user_data(*self.ffi, ptr::null_mut(), None);
+                self.gbm
+                    .gbm_bo_set_user_data(*self.ffi, ptr::null_mut(), None);
                 Some(*boxed)
             }
         }
@@ -451,11 +460,14 @@ impl<T: 'static> BufferObject<T> {
     pub(crate) unsafe fn new(
         ffi: *mut ffi::gbm_bo,
         device: Ptr<ffi::gbm_device>,
+        gbm: Arc<Gbm>,
     ) -> BufferObject<T> {
+        let gbm_ = gbm.clone();
         BufferObject {
-            ffi: Ptr::<ffi::gbm_bo>::new(ffi, |ptr| ffi::gbm_bo_destroy(ptr)),
+            ffi: Ptr::<ffi::gbm_bo>::new(ffi, move |ptr| gbm_.gbm_bo_destroy(ptr)),
             _device: device,
             _userdata: PhantomData,
+            gbm,
         }
     }
 
@@ -513,12 +525,15 @@ impl<T: 'static> DrmPlanarBuffer for BufferObject<T> {
     fn size(&self) -> (u32, u32) {
         (self.width(), self.height())
     }
+
     fn format(&self) -> Format {
         BufferObject::<T>::format(self)
     }
+
     fn modifier(&self) -> Option<Modifier> {
         Some(BufferObject::<T>::modifier(self))
     }
+
     fn pitches(&self) -> [u32; 4] {
         let num = self.plane_count();
         [
@@ -540,6 +555,7 @@ impl<T: 'static> DrmPlanarBuffer for BufferObject<T> {
             },
         ]
     }
+
     fn handles(&self) -> [Option<Handle>; 4] {
         use std::num::NonZeroU32;
         let num = self.plane_count();
@@ -578,6 +594,7 @@ impl<T: 'static> DrmPlanarBuffer for BufferObject<T> {
             },
         ]
     }
+
     fn offsets(&self) -> [u32; 4] {
         self.offsets()
     }

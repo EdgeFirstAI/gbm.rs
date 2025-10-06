@@ -1,11 +1,14 @@
-use crate::{AsRaw, BufferObject, BufferObjectFlags, Format, Modifier, Ptr, Surface};
+use crate::{AsRaw, BufferObject, BufferObjectFlags, Format, Gbm, Modifier, Ptr, Surface};
 
 use std::os::unix::io::{AsFd, AsRawFd, BorrowedFd};
 
-use std::ffi::CStr;
-use std::fmt;
-use std::io::{Error as IoError, Result as IoResult};
-use std::ops::{Deref, DerefMut};
+use std::{
+    ffi::CStr,
+    fmt,
+    io::{Error as IoError, Result as IoResult},
+    ops::{Deref, DerefMut},
+    sync::Arc,
+};
 
 #[cfg(feature = "import-wayland")]
 use wayland_server::protocol::wl_buffer::WlBuffer;
@@ -24,6 +27,7 @@ pub struct Device<T: AsFd> {
     // Declare `ffi` first so it is dropped before `fd`
     ffi: Ptr<ffi::gbm_device>,
     fd: T,
+    gbm: Arc<Gbm>,
 }
 
 impl<T: AsFd> fmt::Debug for Device<T> {
@@ -39,13 +43,14 @@ impl<T: AsFd + Clone> Clone for Device<T> {
         Device {
             fd: self.fd.clone(),
             ffi: self.ffi.clone(),
+            gbm: self.gbm.clone(),
         }
     }
 }
 
 impl<T: AsFd> AsFd for Device<T> {
-    fn as_fd(&self) -> BorrowedFd {
-        unsafe { BorrowedFd::borrow_raw(ffi::gbm_device_get_fd(*self.ffi)) }
+    fn as_fd(&'_ self) -> BorrowedFd<'_> {
+        unsafe { BorrowedFd::borrow_raw(self.gbm.gbm_device_get_fd(*self.ffi)) }
     }
 }
 
@@ -57,6 +62,7 @@ impl<T: AsFd> AsRaw<ffi::gbm_device> for Device<T> {
 
 impl<T: AsFd> Deref for Device<T> {
     type Target = T;
+
     fn deref(&self) -> &T {
         &self.fd
     }
@@ -71,19 +77,23 @@ impl<T: AsFd> DerefMut for Device<T> {
 impl<T: AsFd> Device<T> {
     /// Open a GBM device from a given open DRM device.
     ///
-    /// The underlying file descriptor passed in is used by the backend to communicate with
-    /// platform for allocating the memory.  For allocations using DRI this would be
-    /// the file descriptor returned when opening a device such as `/dev/dri/card0`.
+    /// The underlying file descriptor passed in is used by the backend to
+    /// communicate with platform for allocating the memory.  For
+    /// allocations using DRI this would be the file descriptor returned
+    /// when opening a device such as `/dev/dri/card0`.
     pub fn new(fd: T) -> IoResult<Device<T>> {
-        let ptr = unsafe { ffi::gbm_create_device(fd.as_fd().as_raw_fd()) };
+        let gbm = Arc::new(Gbm::new()?);
+        let ptr = unsafe { gbm.gbm_create_device(fd.as_fd().as_raw_fd()) };
         if ptr.is_null() {
             Err(IoError::last_os_error())
         } else {
+            let gbm_ = gbm.clone();
             Ok(Device {
                 fd,
-                ffi: Ptr::<ffi::gbm_device>::new(ptr, |ptr| unsafe {
-                    ffi::gbm_device_destroy(ptr)
+                ffi: Ptr::<ffi::gbm_device>::new(ptr, move |ptr| unsafe {
+                    gbm_.gbm_device_destroy(ptr)
                 }),
+                gbm,
             })
         }
     }
@@ -91,7 +101,7 @@ impl<T: AsFd> Device<T> {
     /// Get the backend name
     pub fn backend_name(&self) -> &str {
         unsafe {
-            CStr::from_ptr(ffi::gbm_device_get_backend_name(*self.ffi))
+            CStr::from_ptr(self.gbm.gbm_device_get_backend_name(*self.ffi))
                 .to_str()
                 .expect("GBM passed invalid utf8 string")
         }
@@ -99,7 +109,11 @@ impl<T: AsFd> Device<T> {
 
     /// Test if a format is supported for a given set of usage flags
     pub fn is_format_supported(&self, format: Format, usage: BufferObjectFlags) -> bool {
-        unsafe { ffi::gbm_device_is_format_supported(*self.ffi, format as u32, usage.bits()) != 0 }
+        unsafe {
+            self.gbm
+                .gbm_device_is_format_supported(*self.ffi, format as u32, usage.bits())
+                != 0
+        }
     }
 
     /// Get the required number of planes for a given format and modifier
@@ -109,13 +123,14 @@ impl<T: AsFd> Device<T> {
     /// might return `Option::None`.
     pub fn format_modifier_plane_count(&self, format: Format, modifier: Modifier) -> Option<u32> {
         unsafe {
-            ffi::gbm_device_get_format_modifier_plane_count(
-                *self.ffi,
-                format as u32,
-                modifier.into(),
-            )
-            .try_into()
-            .ok()
+            self.gbm
+                .gbm_device_get_format_modifier_plane_count(
+                    *self.ffi,
+                    format as u32,
+                    modifier.into(),
+                )
+                .try_into()
+                .ok()
         }
     }
 
@@ -128,12 +143,13 @@ impl<T: AsFd> Device<T> {
         usage: BufferObjectFlags,
     ) -> IoResult<Surface<U>> {
         let ptr = unsafe {
-            ffi::gbm_surface_create(*self.ffi, width, height, format as u32, usage.bits())
+            self.gbm
+                .gbm_surface_create(*self.ffi, width, height, format as u32, usage.bits())
         };
         if ptr.is_null() {
             Err(IoError::last_os_error())
         } else {
-            Ok(unsafe { Surface::new(ptr, self.ffi.clone()) })
+            Ok(unsafe { Surface::new(ptr, self.ffi.clone(), self.gbm.clone()) })
         }
     }
 
@@ -147,7 +163,7 @@ impl<T: AsFd> Device<T> {
     ) -> IoResult<Surface<U>> {
         let mods = modifiers.map(|m| m.into()).collect::<Vec<u64>>();
         let ptr = unsafe {
-            ffi::gbm_surface_create_with_modifiers(
+            self.gbm.gbm_surface_create_with_modifiers(
                 *self.ffi,
                 width,
                 height,
@@ -159,7 +175,7 @@ impl<T: AsFd> Device<T> {
         if ptr.is_null() {
             Err(IoError::last_os_error())
         } else {
-            Ok(unsafe { Surface::new(ptr, self.ffi.clone()) })
+            Ok(unsafe { Surface::new(ptr, self.ffi.clone(), self.gbm.clone()) })
         }
     }
 
@@ -174,7 +190,7 @@ impl<T: AsFd> Device<T> {
     ) -> IoResult<Surface<U>> {
         let mods = modifiers.map(|m| m.into()).collect::<Vec<u64>>();
         let ptr = unsafe {
-            ffi::gbm_surface_create_with_modifiers2(
+            self.gbm.gbm_surface_create_with_modifiers2(
                 *self.ffi,
                 width,
                 height,
@@ -187,7 +203,7 @@ impl<T: AsFd> Device<T> {
         if ptr.is_null() {
             Err(IoError::last_os_error())
         } else {
-            Ok(unsafe { Surface::new(ptr, self.ffi.clone()) })
+            Ok(unsafe { Surface::new(ptr, self.ffi.clone(), self.gbm.clone()) })
         }
     }
 
@@ -199,16 +215,19 @@ impl<T: AsFd> Device<T> {
         format: Format,
         usage: BufferObjectFlags,
     ) -> IoResult<BufferObject<U>> {
-        let ptr =
-            unsafe { ffi::gbm_bo_create(*self.ffi, width, height, format as u32, usage.bits()) };
+        let ptr = unsafe {
+            self.gbm
+                .gbm_bo_create(*self.ffi, width, height, format as u32, usage.bits())
+        };
         if ptr.is_null() {
             Err(IoError::last_os_error())
         } else {
-            Ok(unsafe { BufferObject::new(ptr, self.ffi.clone()) })
+            Ok(unsafe { BufferObject::new(ptr, self.ffi.clone(), self.gbm.clone()) })
         }
     }
 
-    ///  Allocate a buffer object for the given dimensions with explicit modifiers
+    ///  Allocate a buffer object for the given dimensions with explicit
+    /// modifiers
     pub fn create_buffer_object_with_modifiers<U: 'static>(
         &self,
         width: u32,
@@ -218,7 +237,7 @@ impl<T: AsFd> Device<T> {
     ) -> IoResult<BufferObject<U>> {
         let mods = modifiers.map(|m| m.into()).collect::<Vec<u64>>();
         let ptr = unsafe {
-            ffi::gbm_bo_create_with_modifiers(
+            self.gbm.gbm_bo_create_with_modifiers(
                 *self.ffi,
                 width,
                 height,
@@ -230,11 +249,12 @@ impl<T: AsFd> Device<T> {
         if ptr.is_null() {
             Err(IoError::last_os_error())
         } else {
-            Ok(unsafe { BufferObject::new(ptr, self.ffi.clone()) })
+            Ok(unsafe { BufferObject::new(ptr, self.ffi.clone(), self.gbm.clone()) })
         }
     }
 
-    ///  Allocate a buffer object for the given dimensions with explicit modifiers and flags
+    ///  Allocate a buffer object for the given dimensions with explicit
+    /// modifiers and flags
     pub fn create_buffer_object_with_modifiers2<U: 'static>(
         &self,
         width: u32,
@@ -245,7 +265,7 @@ impl<T: AsFd> Device<T> {
     ) -> IoResult<BufferObject<U>> {
         let mods = modifiers.map(|m| m.into()).collect::<Vec<u64>>();
         let ptr = unsafe {
-            ffi::gbm_bo_create_with_modifiers2(
+            self.gbm.gbm_bo_create_with_modifiers2(
                 *self.ffi,
                 width,
                 height,
@@ -258,14 +278,14 @@ impl<T: AsFd> Device<T> {
         if ptr.is_null() {
             Err(IoError::last_os_error())
         } else {
-            Ok(unsafe { BufferObject::new(ptr, self.ffi.clone()) })
+            Ok(unsafe { BufferObject::new(ptr, self.ffi.clone(), self.gbm.clone()) })
         }
     }
 
     /// Create a GBM buffer object from a wayland buffer
     ///
-    /// This function imports a foreign [`WlBuffer`] object and creates a new GBM
-    /// buffer object for it.
+    /// This function imports a foreign [`WlBuffer`] object and creates a new
+    /// GBM buffer object for it.
     /// This enables using the foreign object with a display API such as KMS.
     ///
     /// The GBM bo shares the underlying pixels but its life-time is
@@ -279,7 +299,7 @@ impl<T: AsFd> Device<T> {
         use wayland_server::Resource;
 
         let ptr = unsafe {
-            ffi::gbm_bo_import(
+            self.gbm.gbm_bo_import(
                 *self.ffi,
                 ffi::GBM_BO_IMPORT_WL_BUFFER,
                 buffer.id().as_ptr() as *mut _,
@@ -289,14 +309,14 @@ impl<T: AsFd> Device<T> {
         if ptr.is_null() {
             Err(IoError::last_os_error())
         } else {
-            Ok(unsafe { BufferObject::new(ptr, self.ffi.clone()) })
+            Ok(unsafe { BufferObject::new(ptr, self.ffi.clone(), self.gbm.clone()) })
         }
     }
 
     /// Create a GBM buffer object from an egl buffer
     ///
-    /// This function imports a foreign [`EGLImage`] object and creates a new GBM
-    /// buffer object for it.
+    /// This function imports a foreign [`EGLImage`] object and creates a new
+    /// GBM buffer object for it.
     /// This enables using the foreign object with a display API such as KMS.
     ///
     /// The GBM bo shares the underlying pixels but its life-time is
@@ -304,15 +324,15 @@ impl<T: AsFd> Device<T> {
     ///
     /// # Safety
     ///
-    /// The given [`EGLImage`] is a raw pointer.  Passing null or an invalid [`EGLImage`] will
-    /// cause undefined behavior.
+    /// The given [`EGLImage`] is a raw pointer.  Passing null or an invalid
+    /// [`EGLImage`] will cause undefined behavior.
     #[cfg(feature = "import-egl")]
     pub unsafe fn import_buffer_object_from_egl<U: 'static>(
         &self,
         buffer: EGLImage,
         usage: BufferObjectFlags,
     ) -> IoResult<BufferObject<U>> {
-        let ptr = ffi::gbm_bo_import(
+        let ptr = self.gbm.gbm_bo_import(
             *self.ffi,
             ffi::GBM_BO_IMPORT_EGL_IMAGE,
             buffer,
@@ -321,7 +341,7 @@ impl<T: AsFd> Device<T> {
         if ptr.is_null() {
             Err(IoError::last_os_error())
         } else {
-            Ok(BufferObject::new(ptr, self.ffi.clone()))
+            Ok(BufferObject::new(ptr, self.ffi.clone(), self.gbm.clone()))
         }
     }
 
@@ -351,7 +371,7 @@ impl<T: AsFd> Device<T> {
         };
 
         let ptr = unsafe {
-            ffi::gbm_bo_import(
+            self.gbm.gbm_bo_import(
                 *self.ffi,
                 ffi::GBM_BO_IMPORT_FD,
                 &mut fd_data as *mut ffi::gbm_import_fd_data as *mut _,
@@ -361,7 +381,7 @@ impl<T: AsFd> Device<T> {
         if ptr.is_null() {
             Err(IoError::last_os_error())
         } else {
-            Ok(unsafe { BufferObject::new(ptr, self.ffi.clone()) })
+            Ok(unsafe { BufferObject::new(ptr, self.ffi.clone(), self.gbm.clone()) })
         }
     }
 
@@ -399,7 +419,7 @@ impl<T: AsFd> Device<T> {
         };
 
         let ptr = unsafe {
-            ffi::gbm_bo_import(
+            self.gbm.gbm_bo_import(
                 *self.ffi,
                 ffi::GBM_BO_IMPORT_FD_MODIFIER,
                 &mut fd_data as *mut ffi::gbm_import_fd_modifier_data as *mut _,
@@ -409,7 +429,7 @@ impl<T: AsFd> Device<T> {
         if ptr.is_null() {
             Err(IoError::last_os_error())
         } else {
-            Ok(unsafe { BufferObject::new(ptr, self.ffi.clone()) })
+            Ok(unsafe { BufferObject::new(ptr, self.ffi.clone(), self.gbm.clone()) })
         }
     }
 }

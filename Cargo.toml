@@ -33,6 +33,8 @@ version = "0.3"
 features = ["server_system"]
 optional = true
 
+
+
 [dependencies.serde]
 # Minimal serde version that can compile serde-annotated bitflags v2.
 # Workaround that allows -Z minimal-versions build to succeed despite bitflags
@@ -51,6 +53,8 @@ import-egl = []
 drm-support = ["drm"]
 use_bindgen = ["gbm-sys/use_bindgen"]
 serde = ["dep:serde", "bitflags/serde"]
+dynamic = ["gbm-sys/dynamic"]
+
 
 [workspace]
 members = [

@@ -75,7 +75,7 @@ fn main() {
     }
 
     // Setup bindings builder
-    let generated = bindgen::builder()
+    let generator = bindgen::builder()
         .clang_arg("-Iinclude")
         .header_contents("bindings.h", &create_header())
         .blocklist_type(TMP_BIND_PREFIX_REG)
@@ -85,24 +85,35 @@ fn main() {
         .allowlist_var("GBM_.*|gbm_.*")
         .constified_enum_module("^gbm_.*$")
         // Layout tests are incorrect across architectures
-        .layout_tests(false)
-        .generate()
-        .unwrap();
+        .layout_tests(false);
+
+    #[cfg(feature = "dynamic")]
+    let generator = generator
+        .dynamic_library_name("gbm")
+        .dynamic_link_require_all(true);
+
+    let generated = generator.generate().unwrap();
 
     println!("cargo:rerun-if-changed=include/gbm.h");
 
     // Generate the bindings
     let out_dir = env::var("OUT_DIR").unwrap();
+
+    #[cfg(not(feature = "dynamic"))]
     let dest_path = Path::new(&out_dir).join("bindings.rs");
+    #[cfg(feature = "dynamic")]
+    let dest_path = Path::new(&out_dir).join("bindings-dynamic.rs");
 
     generated.write_to_file(dest_path).unwrap();
 
     #[cfg(feature = "update_bindings")]
     {
         use std::fs;
-
+        #[cfg(not(feature = "dynamic"))]
         let bind_file = Path::new(&out_dir).join("bindings.rs");
-        let dest_file = "src/bindings.rs";
+        #[cfg(feature = "dynamic")]
+        let bind_file = Path::new(&out_dir).join("bindings-dynamic.rs");
+        let dest_file = "src/bindings-test.rs";
 
         fs::copy(bind_file, dest_file).unwrap();
     }

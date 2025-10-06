@@ -1,7 +1,5 @@
-use crate::{AsRaw, BufferObject, Ptr};
-use std::error;
-use std::fmt;
-use std::marker::PhantomData;
+use crate::{AsRaw, BufferObject, Gbm, Ptr};
+use std::{error, fmt, marker::PhantomData, sync::Arc};
 
 /// A GBM rendering surface
 pub struct Surface<T: 'static> {
@@ -9,6 +7,7 @@ pub struct Surface<T: 'static> {
     ffi: Ptr<ffi::gbm_surface>,
     _device: Ptr<ffi::gbm_device>,
     _bo_userdata: PhantomData<T>,
+    gbm: Arc<Gbm>,
 }
 
 impl<T: 'static> fmt::Debug for Surface<T> {
@@ -41,7 +40,7 @@ impl<T: 'static> Surface<T> {
     /// [have been locked](Self::lock_front_buffer()),
     /// the application must check for a free buffer before rendering.
     pub fn has_free_buffers(&self) -> bool {
-        unsafe { ffi::gbm_surface_has_free_buffers(*self.ffi) != 0 }
+        unsafe { self.gbm.gbm_surface_has_free_buffers(*self.ffi) != 0 }
     }
 
     /// Lock the surface's current front buffer
@@ -57,15 +56,17 @@ impl<T: 'static> Surface<T> {
     /// on the surface or two or more times after `eglSwapBuffers` is an
     /// error and may cause undefined behavior.
     pub unsafe fn lock_front_buffer(&self) -> Result<BufferObject<T>, FrontBufferError> {
-        let buffer_ptr = ffi::gbm_surface_lock_front_buffer(*self.ffi);
+        let buffer_ptr = self.gbm.gbm_surface_lock_front_buffer(*self.ffi);
         if !buffer_ptr.is_null() {
             let surface_ptr = self.ffi.clone();
+            let gbm_ = self.gbm.clone();
             let buffer = BufferObject {
                 ffi: Ptr::new(buffer_ptr, move |ptr| {
-                    ffi::gbm_surface_release_buffer(*surface_ptr, ptr);
+                    gbm_.gbm_surface_release_buffer(*surface_ptr, ptr);
                 }),
                 _device: self._device.clone(),
                 _userdata: std::marker::PhantomData,
+                gbm: self.gbm.clone(),
             };
             Ok(buffer)
         } else {
@@ -76,11 +77,14 @@ impl<T: 'static> Surface<T> {
     pub(crate) unsafe fn new(
         ffi: *mut ffi::gbm_surface,
         device: Ptr<ffi::gbm_device>,
+        gbm: Arc<Gbm>,
     ) -> Surface<T> {
+        let gbm_ = gbm.clone();
         Surface {
-            ffi: Ptr::new(ffi, |ptr| ffi::gbm_surface_destroy(ptr)),
+            ffi: Ptr::new(ffi, move |ptr| gbm_.gbm_surface_destroy(ptr)),
             _device: device,
             _bo_userdata: PhantomData,
+            gbm,
         }
     }
 }

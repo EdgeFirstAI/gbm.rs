@@ -4,11 +4,18 @@
 // it is not so.
 #![cfg_attr(test, allow(deref_nullptr))]
 
-#[cfg(feature = "use_bindgen")]
+#[cfg(all(feature = "use_bindgen", not(feature = "dynamic")))]
 include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 
-#[cfg(not(feature = "use_bindgen"))]
+#[cfg(all(not(feature = "use_bindgen"), not(feature = "dynamic")))]
 include!("bindings.rs");
 
+#[cfg(all(feature = "use_bindgen", feature = "dynamic"))]
+include!(concat!(env!("OUT_DIR"), "/bindings-dynamic.rs"));
+
+#[cfg(all(not(feature = "use_bindgen"), feature = "dynamic"))]
+include!("bindings-dynamic.rs");
+
+#[cfg(not(feature = "dynamic"))]
 #[link(name = "gbm")]
 extern "C" {}
