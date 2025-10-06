@@ -88,9 +88,7 @@ fn main() {
         .layout_tests(false);
 
     #[cfg(feature = "dynamic")]
-    let generator = generator
-        .dynamic_library_name("gbm")
-        .dynamic_link_require_all(true);
+    let generator = generator.dynamic_library_name("gbm");
 
     let generated = generator.generate().unwrap();
 

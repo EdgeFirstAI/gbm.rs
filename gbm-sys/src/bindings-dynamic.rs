@@ -96,120 +96,184 @@ pub mod gbm_bo_transfer_flags {
 }
 pub struct gbm {
     __library: ::libloading::Library,
-    pub gbm_device_get_fd: unsafe extern "C" fn(gbm: *mut gbm_device) -> libc::c_int,
-    pub gbm_device_get_backend_name:
+    pub gbm_device_get_fd:
+        Result<unsafe extern "C" fn(gbm: *mut gbm_device) -> libc::c_int, ::libloading::Error>,
+    pub gbm_device_get_backend_name: Result<
         unsafe extern "C" fn(gbm: *mut gbm_device) -> *const libc::c_char,
-    pub gbm_device_is_format_supported:
+        ::libloading::Error,
+    >,
+    pub gbm_device_is_format_supported: Result<
         unsafe extern "C" fn(gbm: *mut gbm_device, format: u32, flags: u32) -> libc::c_int,
-    pub gbm_device_get_format_modifier_plane_count:
+        ::libloading::Error,
+    >,
+    pub gbm_device_get_format_modifier_plane_count: Result<
         unsafe extern "C" fn(gbm: *mut gbm_device, format: u32, modifier: u64) -> libc::c_int,
-    pub gbm_device_destroy: unsafe extern "C" fn(gbm: *mut gbm_device),
-    pub gbm_create_device: unsafe extern "C" fn(fd: libc::c_int) -> *mut gbm_device,
-    pub gbm_bo_create: unsafe extern "C" fn(
-        gbm: *mut gbm_device,
-        width: u32,
-        height: u32,
-        format: u32,
-        flags: u32,
-    ) -> *mut gbm_bo,
-    pub gbm_bo_create_with_modifiers: unsafe extern "C" fn(
-        gbm: *mut gbm_device,
-        width: u32,
-        height: u32,
-        format: u32,
-        modifiers: *const u64,
-        count: libc::c_uint,
-    ) -> *mut gbm_bo,
-    pub gbm_bo_create_with_modifiers2: unsafe extern "C" fn(
-        gbm: *mut gbm_device,
-        width: u32,
-        height: u32,
-        format: u32,
-        modifiers: *const u64,
-        count: libc::c_uint,
-        flags: u32,
-    ) -> *mut gbm_bo,
-    pub gbm_bo_import: unsafe extern "C" fn(
-        gbm: *mut gbm_device,
-        type_: u32,
-        buffer: *mut libc::c_void,
-        flags: u32,
-    ) -> *mut gbm_bo,
-    pub gbm_bo_map: unsafe extern "C" fn(
-        bo: *mut gbm_bo,
-        x: u32,
-        y: u32,
-        width: u32,
-        height: u32,
-        flags: u32,
-        stride: *mut u32,
-        map_data: *mut *mut libc::c_void,
-    ) -> *mut libc::c_void,
-    pub gbm_bo_unmap: unsafe extern "C" fn(bo: *mut gbm_bo, map_data: *mut libc::c_void),
-    pub gbm_bo_get_width: unsafe extern "C" fn(bo: *mut gbm_bo) -> u32,
-    pub gbm_bo_get_height: unsafe extern "C" fn(bo: *mut gbm_bo) -> u32,
-    pub gbm_bo_get_stride: unsafe extern "C" fn(bo: *mut gbm_bo) -> u32,
-    pub gbm_bo_get_stride_for_plane:
+        ::libloading::Error,
+    >,
+    pub gbm_device_destroy: Result<unsafe extern "C" fn(gbm: *mut gbm_device), ::libloading::Error>,
+    pub gbm_create_device:
+        Result<unsafe extern "C" fn(fd: libc::c_int) -> *mut gbm_device, ::libloading::Error>,
+    pub gbm_bo_create: Result<
+        unsafe extern "C" fn(
+            gbm: *mut gbm_device,
+            width: u32,
+            height: u32,
+            format: u32,
+            flags: u32,
+        ) -> *mut gbm_bo,
+        ::libloading::Error,
+    >,
+    pub gbm_bo_create_with_modifiers: Result<
+        unsafe extern "C" fn(
+            gbm: *mut gbm_device,
+            width: u32,
+            height: u32,
+            format: u32,
+            modifiers: *const u64,
+            count: libc::c_uint,
+        ) -> *mut gbm_bo,
+        ::libloading::Error,
+    >,
+    pub gbm_bo_create_with_modifiers2: Result<
+        unsafe extern "C" fn(
+            gbm: *mut gbm_device,
+            width: u32,
+            height: u32,
+            format: u32,
+            modifiers: *const u64,
+            count: libc::c_uint,
+            flags: u32,
+        ) -> *mut gbm_bo,
+        ::libloading::Error,
+    >,
+    pub gbm_bo_import: Result<
+        unsafe extern "C" fn(
+            gbm: *mut gbm_device,
+            type_: u32,
+            buffer: *mut libc::c_void,
+            flags: u32,
+        ) -> *mut gbm_bo,
+        ::libloading::Error,
+    >,
+    pub gbm_bo_map: Result<
+        unsafe extern "C" fn(
+            bo: *mut gbm_bo,
+            x: u32,
+            y: u32,
+            width: u32,
+            height: u32,
+            flags: u32,
+            stride: *mut u32,
+            map_data: *mut *mut libc::c_void,
+        ) -> *mut libc::c_void,
+        ::libloading::Error,
+    >,
+    pub gbm_bo_unmap: Result<
+        unsafe extern "C" fn(bo: *mut gbm_bo, map_data: *mut libc::c_void),
+        ::libloading::Error,
+    >,
+    pub gbm_bo_get_width: Result<unsafe extern "C" fn(bo: *mut gbm_bo) -> u32, ::libloading::Error>,
+    pub gbm_bo_get_height:
+        Result<unsafe extern "C" fn(bo: *mut gbm_bo) -> u32, ::libloading::Error>,
+    pub gbm_bo_get_stride:
+        Result<unsafe extern "C" fn(bo: *mut gbm_bo) -> u32, ::libloading::Error>,
+    pub gbm_bo_get_stride_for_plane: Result<
         unsafe extern "C" fn(bo: *mut gbm_bo, plane: libc::c_int) -> u32,
-    pub gbm_bo_get_format: unsafe extern "C" fn(bo: *mut gbm_bo) -> u32,
-    pub gbm_bo_get_bpp: unsafe extern "C" fn(bo: *mut gbm_bo) -> u32,
-    pub gbm_bo_get_offset: unsafe extern "C" fn(bo: *mut gbm_bo, plane: libc::c_int) -> u32,
-    pub gbm_bo_get_device: unsafe extern "C" fn(bo: *mut gbm_bo) -> *mut gbm_device,
-    pub gbm_bo_get_handle: unsafe extern "C" fn(bo: *mut gbm_bo) -> gbm_bo_handle,
-    pub gbm_bo_get_fd: unsafe extern "C" fn(bo: *mut gbm_bo) -> libc::c_int,
-    pub gbm_bo_get_modifier: unsafe extern "C" fn(bo: *mut gbm_bo) -> u64,
-    pub gbm_bo_get_plane_count: unsafe extern "C" fn(bo: *mut gbm_bo) -> libc::c_int,
-    pub gbm_bo_get_handle_for_plane:
+        ::libloading::Error,
+    >,
+    pub gbm_bo_get_format:
+        Result<unsafe extern "C" fn(bo: *mut gbm_bo) -> u32, ::libloading::Error>,
+    pub gbm_bo_get_bpp: Result<unsafe extern "C" fn(bo: *mut gbm_bo) -> u32, ::libloading::Error>,
+    pub gbm_bo_get_offset: Result<
+        unsafe extern "C" fn(bo: *mut gbm_bo, plane: libc::c_int) -> u32,
+        ::libloading::Error,
+    >,
+    pub gbm_bo_get_device:
+        Result<unsafe extern "C" fn(bo: *mut gbm_bo) -> *mut gbm_device, ::libloading::Error>,
+    pub gbm_bo_get_handle:
+        Result<unsafe extern "C" fn(bo: *mut gbm_bo) -> gbm_bo_handle, ::libloading::Error>,
+    pub gbm_bo_get_fd:
+        Result<unsafe extern "C" fn(bo: *mut gbm_bo) -> libc::c_int, ::libloading::Error>,
+    pub gbm_bo_get_modifier:
+        Result<unsafe extern "C" fn(bo: *mut gbm_bo) -> u64, ::libloading::Error>,
+    pub gbm_bo_get_plane_count:
+        Result<unsafe extern "C" fn(bo: *mut gbm_bo) -> libc::c_int, ::libloading::Error>,
+    pub gbm_bo_get_handle_for_plane: Result<
         unsafe extern "C" fn(bo: *mut gbm_bo, plane: libc::c_int) -> gbm_bo_handle,
-    pub gbm_bo_get_fd_for_plane:
+        ::libloading::Error,
+    >,
+    pub gbm_bo_get_fd_for_plane: Result<
         unsafe extern "C" fn(bo: *mut gbm_bo, plane: libc::c_int) -> libc::c_int,
-    pub gbm_bo_write: unsafe extern "C" fn(
-        bo: *mut gbm_bo,
-        buf: *const libc::c_void,
-        count: usize,
-    ) -> libc::c_int,
-    pub gbm_bo_set_user_data: unsafe extern "C" fn(
-        bo: *mut gbm_bo,
-        data: *mut libc::c_void,
-        destroy_user_data: ::std::option::Option<
-            unsafe extern "C" fn(arg1: *mut gbm_bo, arg2: *mut libc::c_void),
-        >,
-    ),
-    pub gbm_bo_get_user_data: unsafe extern "C" fn(bo: *mut gbm_bo) -> *mut libc::c_void,
-    pub gbm_bo_destroy: unsafe extern "C" fn(bo: *mut gbm_bo),
-    pub gbm_surface_create: unsafe extern "C" fn(
-        gbm: *mut gbm_device,
-        width: u32,
-        height: u32,
-        format: u32,
-        flags: u32,
-    ) -> *mut gbm_surface,
-    pub gbm_surface_create_with_modifiers: unsafe extern "C" fn(
-        gbm: *mut gbm_device,
-        width: u32,
-        height: u32,
-        format: u32,
-        modifiers: *const u64,
-        count: libc::c_uint,
-    ) -> *mut gbm_surface,
-    pub gbm_surface_create_with_modifiers2: unsafe extern "C" fn(
-        gbm: *mut gbm_device,
-        width: u32,
-        height: u32,
-        format: u32,
-        modifiers: *const u64,
-        count: libc::c_uint,
-        flags: u32,
-    ) -> *mut gbm_surface,
+        ::libloading::Error,
+    >,
+    pub gbm_bo_write: Result<
+        unsafe extern "C" fn(
+            bo: *mut gbm_bo,
+            buf: *const libc::c_void,
+            count: usize,
+        ) -> libc::c_int,
+        ::libloading::Error,
+    >,
+    pub gbm_bo_set_user_data: Result<
+        unsafe extern "C" fn(
+            bo: *mut gbm_bo,
+            data: *mut libc::c_void,
+            destroy_user_data: ::std::option::Option<
+                unsafe extern "C" fn(arg1: *mut gbm_bo, arg2: *mut libc::c_void),
+            >,
+        ),
+        ::libloading::Error,
+    >,
+    pub gbm_bo_get_user_data:
+        Result<unsafe extern "C" fn(bo: *mut gbm_bo) -> *mut libc::c_void, ::libloading::Error>,
+    pub gbm_bo_destroy: Result<unsafe extern "C" fn(bo: *mut gbm_bo), ::libloading::Error>,
+    pub gbm_surface_create: Result<
+        unsafe extern "C" fn(
+            gbm: *mut gbm_device,
+            width: u32,
+            height: u32,
+            format: u32,
+            flags: u32,
+        ) -> *mut gbm_surface,
+        ::libloading::Error,
+    >,
+    pub gbm_surface_create_with_modifiers: Result<
+        unsafe extern "C" fn(
+            gbm: *mut gbm_device,
+            width: u32,
+            height: u32,
+            format: u32,
+            modifiers: *const u64,
+            count: libc::c_uint,
+        ) -> *mut gbm_surface,
+        ::libloading::Error,
+    >,
+    pub gbm_surface_create_with_modifiers2: Result<
+        unsafe extern "C" fn(
+            gbm: *mut gbm_device,
+            width: u32,
+            height: u32,
+            format: u32,
+            modifiers: *const u64,
+            count: libc::c_uint,
+            flags: u32,
+        ) -> *mut gbm_surface,
+        ::libloading::Error,
+    >,
     pub gbm_surface_lock_front_buffer:
-        unsafe extern "C" fn(surface: *mut gbm_surface) -> *mut gbm_bo,
-    pub gbm_surface_release_buffer:
+        Result<unsafe extern "C" fn(surface: *mut gbm_surface) -> *mut gbm_bo, ::libloading::Error>,
+    pub gbm_surface_release_buffer: Result<
         unsafe extern "C" fn(surface: *mut gbm_surface, bo: *mut gbm_bo),
+        ::libloading::Error,
+    >,
     pub gbm_surface_has_free_buffers:
-        unsafe extern "C" fn(surface: *mut gbm_surface) -> libc::c_int,
-    pub gbm_surface_destroy: unsafe extern "C" fn(surface: *mut gbm_surface),
-    pub gbm_format_get_name:
+        Result<unsafe extern "C" fn(surface: *mut gbm_surface) -> libc::c_int, ::libloading::Error>,
+    pub gbm_surface_destroy:
+        Result<unsafe extern "C" fn(surface: *mut gbm_surface), ::libloading::Error>,
+    pub gbm_format_get_name: Result<
         unsafe extern "C" fn(gbm_format: u32, desc: *mut gbm_format_name_desc) -> *mut libc::c_char,
+        ::libloading::Error,
+    >,
 }
 impl gbm {
     pub unsafe fn new<P>(path: P) -> Result<Self, ::libloading::Error>
@@ -225,70 +289,68 @@ impl gbm {
         L: Into<::libloading::Library>,
     {
         let __library = library.into();
-        let gbm_device_get_fd = __library.get(b"gbm_device_get_fd\0").map(|sym| *sym)?;
+        let gbm_device_get_fd = __library.get(b"gbm_device_get_fd\0").map(|sym| *sym);
         let gbm_device_get_backend_name = __library
             .get(b"gbm_device_get_backend_name\0")
-            .map(|sym| *sym)?;
+            .map(|sym| *sym);
         let gbm_device_is_format_supported = __library
             .get(b"gbm_device_is_format_supported\0")
-            .map(|sym| *sym)?;
+            .map(|sym| *sym);
         let gbm_device_get_format_modifier_plane_count = __library
             .get(b"gbm_device_get_format_modifier_plane_count\0")
-            .map(|sym| *sym)?;
-        let gbm_device_destroy = __library.get(b"gbm_device_destroy\0").map(|sym| *sym)?;
-        let gbm_create_device = __library.get(b"gbm_create_device\0").map(|sym| *sym)?;
-        let gbm_bo_create = __library.get(b"gbm_bo_create\0").map(|sym| *sym)?;
+            .map(|sym| *sym);
+        let gbm_device_destroy = __library.get(b"gbm_device_destroy\0").map(|sym| *sym);
+        let gbm_create_device = __library.get(b"gbm_create_device\0").map(|sym| *sym);
+        let gbm_bo_create = __library.get(b"gbm_bo_create\0").map(|sym| *sym);
         let gbm_bo_create_with_modifiers = __library
             .get(b"gbm_bo_create_with_modifiers\0")
-            .map(|sym| *sym)?;
+            .map(|sym| *sym);
         let gbm_bo_create_with_modifiers2 = __library
             .get(b"gbm_bo_create_with_modifiers2\0")
-            .map(|sym| *sym)?;
-        let gbm_bo_import = __library.get(b"gbm_bo_import\0").map(|sym| *sym)?;
-        let gbm_bo_map = __library.get(b"gbm_bo_map\0").map(|sym| *sym)?;
-        let gbm_bo_unmap = __library.get(b"gbm_bo_unmap\0").map(|sym| *sym)?;
-        let gbm_bo_get_width = __library.get(b"gbm_bo_get_width\0").map(|sym| *sym)?;
-        let gbm_bo_get_height = __library.get(b"gbm_bo_get_height\0").map(|sym| *sym)?;
-        let gbm_bo_get_stride = __library.get(b"gbm_bo_get_stride\0").map(|sym| *sym)?;
+            .map(|sym| *sym);
+        let gbm_bo_import = __library.get(b"gbm_bo_import\0").map(|sym| *sym);
+        let gbm_bo_map = __library.get(b"gbm_bo_map\0").map(|sym| *sym);
+        let gbm_bo_unmap = __library.get(b"gbm_bo_unmap\0").map(|sym| *sym);
+        let gbm_bo_get_width = __library.get(b"gbm_bo_get_width\0").map(|sym| *sym);
+        let gbm_bo_get_height = __library.get(b"gbm_bo_get_height\0").map(|sym| *sym);
+        let gbm_bo_get_stride = __library.get(b"gbm_bo_get_stride\0").map(|sym| *sym);
         let gbm_bo_get_stride_for_plane = __library
             .get(b"gbm_bo_get_stride_for_plane\0")
-            .map(|sym| *sym)?;
-        let gbm_bo_get_format = __library.get(b"gbm_bo_get_format\0").map(|sym| *sym)?;
-        let gbm_bo_get_bpp = __library.get(b"gbm_bo_get_bpp\0").map(|sym| *sym)?;
-        let gbm_bo_get_offset = __library.get(b"gbm_bo_get_offset\0").map(|sym| *sym)?;
-        let gbm_bo_get_device = __library.get(b"gbm_bo_get_device\0").map(|sym| *sym)?;
-        let gbm_bo_get_handle = __library.get(b"gbm_bo_get_handle\0").map(|sym| *sym)?;
-        let gbm_bo_get_fd = __library.get(b"gbm_bo_get_fd\0").map(|sym| *sym)?;
-        let gbm_bo_get_modifier = __library.get(b"gbm_bo_get_modifier\0").map(|sym| *sym)?;
-        let gbm_bo_get_plane_count = __library.get(b"gbm_bo_get_plane_count\0").map(|sym| *sym)?;
+            .map(|sym| *sym);
+        let gbm_bo_get_format = __library.get(b"gbm_bo_get_format\0").map(|sym| *sym);
+        let gbm_bo_get_bpp = __library.get(b"gbm_bo_get_bpp\0").map(|sym| *sym);
+        let gbm_bo_get_offset = __library.get(b"gbm_bo_get_offset\0").map(|sym| *sym);
+        let gbm_bo_get_device = __library.get(b"gbm_bo_get_device\0").map(|sym| *sym);
+        let gbm_bo_get_handle = __library.get(b"gbm_bo_get_handle\0").map(|sym| *sym);
+        let gbm_bo_get_fd = __library.get(b"gbm_bo_get_fd\0").map(|sym| *sym);
+        let gbm_bo_get_modifier = __library.get(b"gbm_bo_get_modifier\0").map(|sym| *sym);
+        let gbm_bo_get_plane_count = __library.get(b"gbm_bo_get_plane_count\0").map(|sym| *sym);
         let gbm_bo_get_handle_for_plane = __library
             .get(b"gbm_bo_get_handle_for_plane\0")
-            .map(|sym| *sym)?;
-        let gbm_bo_get_fd_for_plane = __library
-            .get(b"gbm_bo_get_fd_for_plane\0")
-            .map(|sym| *sym)?;
-        let gbm_bo_write = __library.get(b"gbm_bo_write\0").map(|sym| *sym)?;
-        let gbm_bo_set_user_data = __library.get(b"gbm_bo_set_user_data\0").map(|sym| *sym)?;
-        let gbm_bo_get_user_data = __library.get(b"gbm_bo_get_user_data\0").map(|sym| *sym)?;
-        let gbm_bo_destroy = __library.get(b"gbm_bo_destroy\0").map(|sym| *sym)?;
-        let gbm_surface_create = __library.get(b"gbm_surface_create\0").map(|sym| *sym)?;
+            .map(|sym| *sym);
+        let gbm_bo_get_fd_for_plane = __library.get(b"gbm_bo_get_fd_for_plane\0").map(|sym| *sym);
+        let gbm_bo_write = __library.get(b"gbm_bo_write\0").map(|sym| *sym);
+        let gbm_bo_set_user_data = __library.get(b"gbm_bo_set_user_data\0").map(|sym| *sym);
+        let gbm_bo_get_user_data = __library.get(b"gbm_bo_get_user_data\0").map(|sym| *sym);
+        let gbm_bo_destroy = __library.get(b"gbm_bo_destroy\0").map(|sym| *sym);
+        let gbm_surface_create = __library.get(b"gbm_surface_create\0").map(|sym| *sym);
         let gbm_surface_create_with_modifiers = __library
             .get(b"gbm_surface_create_with_modifiers\0")
-            .map(|sym| *sym)?;
+            .map(|sym| *sym);
         let gbm_surface_create_with_modifiers2 = __library
             .get(b"gbm_surface_create_with_modifiers2\0")
-            .map(|sym| *sym)?;
+            .map(|sym| *sym);
         let gbm_surface_lock_front_buffer = __library
             .get(b"gbm_surface_lock_front_buffer\0")
-            .map(|sym| *sym)?;
+            .map(|sym| *sym);
         let gbm_surface_release_buffer = __library
             .get(b"gbm_surface_release_buffer\0")
-            .map(|sym| *sym)?;
+            .map(|sym| *sym);
         let gbm_surface_has_free_buffers = __library
             .get(b"gbm_surface_has_free_buffers\0")
-            .map(|sym| *sym)?;
-        let gbm_surface_destroy = __library.get(b"gbm_surface_destroy\0").map(|sym| *sym)?;
-        let gbm_format_get_name = __library.get(b"gbm_format_get_name\0").map(|sym| *sym)?;
+            .map(|sym| *sym);
+        let gbm_surface_destroy = __library.get(b"gbm_surface_destroy\0").map(|sym| *sym);
+        let gbm_format_get_name = __library.get(b"gbm_format_get_name\0").map(|sym| *sym);
         Ok(gbm {
             __library,
             gbm_device_get_fd,
@@ -333,11 +395,17 @@ impl gbm {
     }
 
     pub unsafe fn gbm_device_get_fd(&self, gbm: *mut gbm_device) -> libc::c_int {
-        (self.gbm_device_get_fd)(gbm)
+        (self
+            .gbm_device_get_fd
+            .as_ref()
+            .expect("Expected function, got error."))(gbm)
     }
 
     pub unsafe fn gbm_device_get_backend_name(&self, gbm: *mut gbm_device) -> *const libc::c_char {
-        (self.gbm_device_get_backend_name)(gbm)
+        (self
+            .gbm_device_get_backend_name
+            .as_ref()
+            .expect("Expected function, got error."))(gbm)
     }
 
     pub unsafe fn gbm_device_is_format_supported(
@@ -346,7 +414,10 @@ impl gbm {
         format: u32,
         flags: u32,
     ) -> libc::c_int {
-        (self.gbm_device_is_format_supported)(gbm, format, flags)
+        (self
+            .gbm_device_is_format_supported
+            .as_ref()
+            .expect("Expected function, got error."))(gbm, format, flags)
     }
 
     pub unsafe fn gbm_device_get_format_modifier_plane_count(
@@ -355,15 +426,24 @@ impl gbm {
         format: u32,
         modifier: u64,
     ) -> libc::c_int {
-        (self.gbm_device_get_format_modifier_plane_count)(gbm, format, modifier)
+        (self
+            .gbm_device_get_format_modifier_plane_count
+            .as_ref()
+            .expect("Expected function, got error."))(gbm, format, modifier)
     }
 
     pub unsafe fn gbm_device_destroy(&self, gbm: *mut gbm_device) {
-        (self.gbm_device_destroy)(gbm)
+        (self
+            .gbm_device_destroy
+            .as_ref()
+            .expect("Expected function, got error."))(gbm)
     }
 
     pub unsafe fn gbm_create_device(&self, fd: libc::c_int) -> *mut gbm_device {
-        (self.gbm_create_device)(fd)
+        (self
+            .gbm_create_device
+            .as_ref()
+            .expect("Expected function, got error."))(fd)
     }
 
     pub unsafe fn gbm_bo_create(
@@ -374,7 +454,10 @@ impl gbm {
         format: u32,
         flags: u32,
     ) -> *mut gbm_bo {
-        (self.gbm_bo_create)(gbm, width, height, format, flags)
+        (self
+            .gbm_bo_create
+            .as_ref()
+            .expect("Expected function, got error."))(gbm, width, height, format, flags)
     }
 
     pub unsafe fn gbm_bo_create_with_modifiers(
@@ -386,7 +469,12 @@ impl gbm {
         modifiers: *const u64,
         count: libc::c_uint,
     ) -> *mut gbm_bo {
-        (self.gbm_bo_create_with_modifiers)(gbm, width, height, format, modifiers, count)
+        (self
+            .gbm_bo_create_with_modifiers
+            .as_ref()
+            .expect("Expected function, got error."))(
+            gbm, width, height, format, modifiers, count
+        )
     }
 
     pub unsafe fn gbm_bo_create_with_modifiers2(
@@ -399,7 +487,12 @@ impl gbm {
         count: libc::c_uint,
         flags: u32,
     ) -> *mut gbm_bo {
-        (self.gbm_bo_create_with_modifiers2)(gbm, width, height, format, modifiers, count, flags)
+        (self
+            .gbm_bo_create_with_modifiers2
+            .as_ref()
+            .expect("Expected function, got error."))(
+            gbm, width, height, format, modifiers, count, flags,
+        )
     }
 
     pub unsafe fn gbm_bo_import(
@@ -409,7 +502,10 @@ impl gbm {
         buffer: *mut libc::c_void,
         flags: u32,
     ) -> *mut gbm_bo {
-        (self.gbm_bo_import)(gbm, type_, buffer, flags)
+        (self
+            .gbm_bo_import
+            .as_ref()
+            .expect("Expected function, got error."))(gbm, type_, buffer, flags)
     }
 
     pub unsafe fn gbm_bo_map(
@@ -423,59 +519,103 @@ impl gbm {
         stride: *mut u32,
         map_data: *mut *mut libc::c_void,
     ) -> *mut libc::c_void {
-        (self.gbm_bo_map)(bo, x, y, width, height, flags, stride, map_data)
+        (self
+            .gbm_bo_map
+            .as_ref()
+            .expect("Expected function, got error."))(
+            bo, x, y, width, height, flags, stride, map_data,
+        )
     }
 
     pub unsafe fn gbm_bo_unmap(&self, bo: *mut gbm_bo, map_data: *mut libc::c_void) {
-        (self.gbm_bo_unmap)(bo, map_data)
+        (self
+            .gbm_bo_unmap
+            .as_ref()
+            .expect("Expected function, got error."))(bo, map_data)
     }
 
     pub unsafe fn gbm_bo_get_width(&self, bo: *mut gbm_bo) -> u32 {
-        (self.gbm_bo_get_width)(bo)
+        (self
+            .gbm_bo_get_width
+            .as_ref()
+            .expect("Expected function, got error."))(bo)
     }
 
     pub unsafe fn gbm_bo_get_height(&self, bo: *mut gbm_bo) -> u32 {
-        (self.gbm_bo_get_height)(bo)
+        (self
+            .gbm_bo_get_height
+            .as_ref()
+            .expect("Expected function, got error."))(bo)
     }
 
     pub unsafe fn gbm_bo_get_stride(&self, bo: *mut gbm_bo) -> u32 {
-        (self.gbm_bo_get_stride)(bo)
+        (self
+            .gbm_bo_get_stride
+            .as_ref()
+            .expect("Expected function, got error."))(bo)
     }
 
     pub unsafe fn gbm_bo_get_stride_for_plane(&self, bo: *mut gbm_bo, plane: libc::c_int) -> u32 {
-        (self.gbm_bo_get_stride_for_plane)(bo, plane)
+        (self
+            .gbm_bo_get_stride_for_plane
+            .as_ref()
+            .expect("Expected function, got error."))(bo, plane)
     }
 
     pub unsafe fn gbm_bo_get_format(&self, bo: *mut gbm_bo) -> u32 {
-        (self.gbm_bo_get_format)(bo)
+        (self
+            .gbm_bo_get_format
+            .as_ref()
+            .expect("Expected function, got error."))(bo)
     }
 
     pub unsafe fn gbm_bo_get_bpp(&self, bo: *mut gbm_bo) -> u32 {
-        (self.gbm_bo_get_bpp)(bo)
+        (self
+            .gbm_bo_get_bpp
+            .as_ref()
+            .expect("Expected function, got error."))(bo)
     }
 
     pub unsafe fn gbm_bo_get_offset(&self, bo: *mut gbm_bo, plane: libc::c_int) -> u32 {
-        (self.gbm_bo_get_offset)(bo, plane)
+        (self
+            .gbm_bo_get_offset
+            .as_ref()
+            .expect("Expected function, got error."))(bo, plane)
     }
 
     pub unsafe fn gbm_bo_get_device(&self, bo: *mut gbm_bo) -> *mut gbm_device {
-        (self.gbm_bo_get_device)(bo)
+        (self
+            .gbm_bo_get_device
+            .as_ref()
+            .expect("Expected function, got error."))(bo)
     }
 
     pub unsafe fn gbm_bo_get_handle(&self, bo: *mut gbm_bo) -> gbm_bo_handle {
-        (self.gbm_bo_get_handle)(bo)
+        (self
+            .gbm_bo_get_handle
+            .as_ref()
+            .expect("Expected function, got error."))(bo)
     }
 
     pub unsafe fn gbm_bo_get_fd(&self, bo: *mut gbm_bo) -> libc::c_int {
-        (self.gbm_bo_get_fd)(bo)
+        (self
+            .gbm_bo_get_fd
+            .as_ref()
+            .expect("Expected function, got error."))(bo)
     }
 
     pub unsafe fn gbm_bo_get_modifier(&self, bo: *mut gbm_bo) -> u64 {
-        (self.gbm_bo_get_modifier)(bo)
+        (self
+            .gbm_bo_get_modifier
+            .as_ref()
+            .expect("Expected function, got error."))(bo)
     }
 
     pub unsafe fn gbm_bo_get_plane_count(&self, bo: *mut gbm_bo) -> libc::c_int {
-        (self.gbm_bo_get_plane_count)(bo)
+        (self
+            .gbm_bo_get_plane_count
+            .as_ref()
+            .expect("Expected function, got error."))(bo)
     }
 
     pub unsafe fn gbm_bo_get_handle_for_plane(
@@ -483,7 +623,10 @@ impl gbm {
         bo: *mut gbm_bo,
         plane: libc::c_int,
     ) -> gbm_bo_handle {
-        (self.gbm_bo_get_handle_for_plane)(bo, plane)
+        (self
+            .gbm_bo_get_handle_for_plane
+            .as_ref()
+            .expect("Expected function, got error."))(bo, plane)
     }
 
     pub unsafe fn gbm_bo_get_fd_for_plane(
@@ -491,7 +634,10 @@ impl gbm {
         bo: *mut gbm_bo,
         plane: libc::c_int,
     ) -> libc::c_int {
-        (self.gbm_bo_get_fd_for_plane)(bo, plane)
+        (self
+            .gbm_bo_get_fd_for_plane
+            .as_ref()
+            .expect("Expected function, got error."))(bo, plane)
     }
 
     pub unsafe fn gbm_bo_write(
@@ -500,7 +646,10 @@ impl gbm {
         buf: *const libc::c_void,
         count: usize,
     ) -> libc::c_int {
-        (self.gbm_bo_write)(bo, buf, count)
+        (self
+            .gbm_bo_write
+            .as_ref()
+            .expect("Expected function, got error."))(bo, buf, count)
     }
 
     pub unsafe fn gbm_bo_set_user_data(
@@ -511,15 +660,24 @@ impl gbm {
             unsafe extern "C" fn(arg1: *mut gbm_bo, arg2: *mut libc::c_void),
         >,
     ) {
-        (self.gbm_bo_set_user_data)(bo, data, destroy_user_data)
+        (self
+            .gbm_bo_set_user_data
+            .as_ref()
+            .expect("Expected function, got error."))(bo, data, destroy_user_data)
     }
 
     pub unsafe fn gbm_bo_get_user_data(&self, bo: *mut gbm_bo) -> *mut libc::c_void {
-        (self.gbm_bo_get_user_data)(bo)
+        (self
+            .gbm_bo_get_user_data
+            .as_ref()
+            .expect("Expected function, got error."))(bo)
     }
 
     pub unsafe fn gbm_bo_destroy(&self, bo: *mut gbm_bo) {
-        (self.gbm_bo_destroy)(bo)
+        (self
+            .gbm_bo_destroy
+            .as_ref()
+            .expect("Expected function, got error."))(bo)
     }
 
     pub unsafe fn gbm_surface_create(
@@ -530,7 +688,10 @@ impl gbm {
         format: u32,
         flags: u32,
     ) -> *mut gbm_surface {
-        (self.gbm_surface_create)(gbm, width, height, format, flags)
+        (self
+            .gbm_surface_create
+            .as_ref()
+            .expect("Expected function, got error."))(gbm, width, height, format, flags)
     }
 
     pub unsafe fn gbm_surface_create_with_modifiers(
@@ -542,7 +703,12 @@ impl gbm {
         modifiers: *const u64,
         count: libc::c_uint,
     ) -> *mut gbm_surface {
-        (self.gbm_surface_create_with_modifiers)(gbm, width, height, format, modifiers, count)
+        (self
+            .gbm_surface_create_with_modifiers
+            .as_ref()
+            .expect("Expected function, got error."))(
+            gbm, width, height, format, modifiers, count
+        )
     }
 
     pub unsafe fn gbm_surface_create_with_modifiers2(
@@ -555,25 +721,40 @@ impl gbm {
         count: libc::c_uint,
         flags: u32,
     ) -> *mut gbm_surface {
-        (self.gbm_surface_create_with_modifiers2)(
+        (self
+            .gbm_surface_create_with_modifiers2
+            .as_ref()
+            .expect("Expected function, got error."))(
             gbm, width, height, format, modifiers, count, flags,
         )
     }
 
     pub unsafe fn gbm_surface_lock_front_buffer(&self, surface: *mut gbm_surface) -> *mut gbm_bo {
-        (self.gbm_surface_lock_front_buffer)(surface)
+        (self
+            .gbm_surface_lock_front_buffer
+            .as_ref()
+            .expect("Expected function, got error."))(surface)
     }
 
     pub unsafe fn gbm_surface_release_buffer(&self, surface: *mut gbm_surface, bo: *mut gbm_bo) {
-        (self.gbm_surface_release_buffer)(surface, bo)
+        (self
+            .gbm_surface_release_buffer
+            .as_ref()
+            .expect("Expected function, got error."))(surface, bo)
     }
 
     pub unsafe fn gbm_surface_has_free_buffers(&self, surface: *mut gbm_surface) -> libc::c_int {
-        (self.gbm_surface_has_free_buffers)(surface)
+        (self
+            .gbm_surface_has_free_buffers
+            .as_ref()
+            .expect("Expected function, got error."))(surface)
     }
 
     pub unsafe fn gbm_surface_destroy(&self, surface: *mut gbm_surface) {
-        (self.gbm_surface_destroy)(surface)
+        (self
+            .gbm_surface_destroy
+            .as_ref()
+            .expect("Expected function, got error."))(surface)
     }
 
     pub unsafe fn gbm_format_get_name(
@@ -581,6 +762,9 @@ impl gbm {
         gbm_format: u32,
         desc: *mut gbm_format_name_desc,
     ) -> *mut libc::c_char {
-        (self.gbm_format_get_name)(gbm_format, desc)
+        (self
+            .gbm_format_get_name
+            .as_ref()
+            .expect("Expected function, got error."))(gbm_format, desc)
     }
 }
