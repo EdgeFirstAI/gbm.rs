@@ -106,9 +106,30 @@ pub use drm_fourcc::{DrmFourcc as Format, DrmModifier as Modifier};
 
 use std::{fmt, sync::Arc};
 
+#[cfg(feature = "dynamic")]
+static LIB: std::sync::OnceLock<ffi::gbm> = std::sync::OnceLock::new();
+
 struct Gbm {
     #[cfg(feature = "dynamic")]
-    lib: ffi::gbm,
+    lib: &'static ffi::gbm,
+}
+
+#[cfg(feature = "dynamic")]
+fn get_or_init_lib() -> Result<&'static ffi::gbm, std::io::Error> {
+    if let Some(gbm) = LIB.get() {
+        return Ok(gbm);
+    }
+
+    match unsafe { ffi::gbm::new("libgbm.so") } {
+        Err(e) => {
+            return Err(std::io::Error::other(e));
+        }
+        Ok(l) => {
+            LIB.get_or_init(|| l);
+        }
+    }
+
+    Ok(LIB.get().unwrap())
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -118,10 +139,9 @@ impl Gbm {
         #[cfg(not(feature = "dynamic"))]
         return Ok(Self {});
         #[cfg(feature = "dynamic")]
-        match unsafe { ffi::gbm::new("libgbm.so") } {
-            Err(e) => Err(std::io::Error::other(e)),
-            Ok(lib) => Ok(Self { lib }),
-        }
+        Ok(Self {
+            lib: get_or_init_lib()?,
+        })
     }
 
     unsafe fn gbm_device_get_fd(&self, gbm: *mut ffi::gbm_device) -> libc::c_int {
