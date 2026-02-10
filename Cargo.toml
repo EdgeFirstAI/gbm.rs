@@ -1,15 +1,19 @@
 [package]
-name = "gbm"
-description = "libgbm bindings for rust"
+name = "edgefirst-gbm"
+description = "libgbm bindings for rust with dynamic loading support (fork of gbm)"
 license = "MIT"
-documentation = "https://docs.rs/gbm"
-repository = "https://github.com/Smithay/gbm.rs"
-version = "0.18.0"
-keywords = ["wayland", "gbm", "drm", "bindings"]
+documentation = "https://docs.rs/edgefirst-gbm"
+repository = "https://github.com/EdgeFirstAI/gbm.rs"
+version = "0.18.1"
+keywords = ["wayland", "gbm", "drm", "bindings", "dynamic-loading"]
 categories = ["external-ffi-bindings"]
-authors = ["Victoria Brekenfeld <github@drakulix.de>"]
+authors = [
+    "Victoria Brekenfeld <github@drakulix.de>",
+    "Au-Zone Technologies <support@au-zone.com>",
+]
 exclude = [".gitignore", ".travis.yml", ".rustfmt.toml", ".github"]
 edition = "2021"
+readme = "README.md"
 
 [dependencies]
 libc = "0.2"
@@ -17,7 +21,8 @@ bitflags = "2"
 drm-fourcc = "2.2"
 
 [dependencies.gbm-sys]
-version = "0.4.0"
+package = "edgefirst-gbm-sys"
+version = "0.4.1"
 path = "./gbm-sys"
 
 [dependencies.drm]

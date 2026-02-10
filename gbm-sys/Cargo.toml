@@ -1,15 +1,19 @@
 [package]
-name = "gbm-sys"
-version = "0.4.0"
-authors = ["Drakulix (Victor Brekenfeld)"]
+name = "edgefirst-gbm-sys"
+version = "0.4.1"
+authors = [
+    "Victoria Brekenfeld <github@drakulix.de>",
+    "Au-Zone Technologies <support@au-zone.com>",
+]
 build = "build.rs"
-description = "Bindgen generated unsafe libgbm wrapper"
-documentation = "https://Drakulix.github.io/gbm.rs/gbm-sys"
-repository = "https://github.com/Drakulix/gbm.rs/tree/master/gbm-sys"
-keywords = ["gbm", "bindings"]
+description = "Bindgen generated unsafe libgbm wrapper with dynamic loading support"
+documentation = "https://docs.rs/edgefirst-gbm-sys"
+repository = "https://github.com/EdgeFirstAI/gbm.rs"
+keywords = ["gbm", "bindings", "dynamic-loading"]
 categories = ["external-ffi-bindings"]
 license = "MIT"
 edition = "2021"
+readme = "../README.md"
 
 [lib]
 path = "src/lib.rs"
