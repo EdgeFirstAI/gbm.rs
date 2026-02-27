@@ -1,3 +1,7 @@
+## 0.18.2
+
+- Improve dynamic libgbm discovery by trying versioned sonames (`libgbm.so.1`, `libgbm.so.2`) in addition to `libgbm.so`
+
 ## 0.18.0
 
 - Removed unnecessary generic from `BufferObject::map`/`BufferObject::map_mut`

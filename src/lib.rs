@@ -115,21 +115,28 @@ struct Gbm {
 }
 
 #[cfg(feature = "dynamic")]
+const LIBGBM_NAMES: &[&str] = &["libgbm.so", "libgbm.so.1", "libgbm.so.2"];
+
+#[cfg(feature = "dynamic")]
 fn get_or_init_lib() -> Result<&'static ffi::gbm, std::io::Error> {
     if let Some(gbm) = LIB.get() {
         return Ok(gbm);
     }
 
-    match unsafe { ffi::gbm::new("libgbm.so") } {
-        Err(e) => {
-            return Err(std::io::Error::other(e));
-        }
-        Ok(l) => {
-            LIB.get_or_init(|| l);
+    let mut last_err = None;
+    for name in LIBGBM_NAMES {
+        match unsafe { ffi::gbm::new(*name) } {
+            Ok(l) => {
+                LIB.get_or_init(|| l);
+                return Ok(LIB.get().unwrap());
+            }
+            Err(e) => {
+                last_err = Some(e);
+            }
         }
     }
 
-    Ok(LIB.get().unwrap())
+    Err(std::io::Error::other(last_err.unwrap()))
 }
 
 #[allow(clippy::too_many_arguments)]
