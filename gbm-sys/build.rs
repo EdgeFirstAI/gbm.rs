@@ -102,7 +102,23 @@ fn main() {
     #[cfg(feature = "dynamic")]
     let dest_path = Path::new(&out_dir).join("bindings-dynamic.rs");
 
-    generated.write_to_file(dest_path).unwrap();
+    generated.write_to_file(&dest_path).unwrap();
+
+    // libloading 0.9 replaced the `AsRef<OsStr>` bound on `Library::new` with the
+    // sealed `AsFilename` trait. bindgen still emits `Library::new(path)` with an
+    // `AsRef<OsStr>` bound, so convert the generic path to a concrete `&OsStr`
+    // (which implements `AsFilename`) to keep the generated wrapper compiling.
+    #[cfg(feature = "dynamic")]
+    {
+        use std::fs;
+        let code = fs::read_to_string(&dest_path).unwrap();
+        let patched = code.replace(
+            "::libloading::Library::new(path)?",
+            "::libloading::Library::new(path.as_ref())?",
+        );
+        assert_ne!(code, patched, "expected to patch Library::new for libloading 0.9");
+        fs::write(&dest_path, patched).unwrap();
+    }
 
     #[cfg(feature = "update_bindings")]
     {

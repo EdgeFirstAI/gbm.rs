@@ -15,11 +15,10 @@
 //!
 //! ```rust,no_run
 //! # extern crate drm;
-//! # extern crate gbm;
 //! # use drm::control::connector::Info as ConnectorInfo;
 //! # use drm::control::Mode;
 //! use drm::control::{self, crtc, framebuffer};
-//! use gbm::{BufferObjectFlags, Device, Format};
+//! use edgefirst_gbm::{BufferObjectFlags, Device, Format};
 //!
 //! # use std::fs::{File, OpenOptions};
 //! # use std::os::unix::io::{AsFd, BorrowedFd};
