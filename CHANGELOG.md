@@ -1,3 +1,10 @@
+## 0.19.0
+
+- Update drm-rs to 0.15
+- Update `libloading` to 0.9 (dynamic feature); adapts to the new `AsFilename` trait
+- Refresh all dependencies to latest compatible versions
+- `edgefirst-gbm-sys` bumped to 0.5.0
+
 ## 0.18.2
 
 - Improve dynamic libgbm discovery by trying versioned sonames (`libgbm.so.1`, `libgbm.so.2`) in addition to `libgbm.so`

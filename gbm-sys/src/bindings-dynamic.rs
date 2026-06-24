@@ -280,7 +280,7 @@ impl gbm {
     where
         P: AsRef<::std::ffi::OsStr>,
     {
-        let library = ::libloading::Library::new(path)?;
+        let library = ::libloading::Library::new(path.as_ref())?;
         Self::from_library(library)
     }
 

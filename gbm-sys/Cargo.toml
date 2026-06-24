@@ -1,6 +1,6 @@
 [package]
 name = "edgefirst-gbm-sys"
-version = "0.4.1"
+version = "0.5.0"
 authors = [
     "Victoria Brekenfeld <github@drakulix.de>",
     "Au-Zone Technologies <support@au-zone.com>",
@@ -23,7 +23,7 @@ version = "0.72"
 optional = true
 
 [dependencies.libloading]
-version = "0.8"
+version = "0.9"
 optional = true
 
 # Specify version of bindgen deps to fix `check-minimal` test
